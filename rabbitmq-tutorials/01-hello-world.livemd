@@ -1,0 +1,100 @@
+# Hello World
+
+```elixir
+Mix.install([
+  # AMQP Client
+  {:amqp, "~> 3.2"},
+  # Lib for input and outputs
+  {:kino, "~> 0.8.0"}
+])
+```
+
+## Configure AMQP
+
+```elixir
+[
+  amqp_host = Kino.Input.text("Amqp Host", default: "localhost"),
+  amqp_port = Kino.Input.text("Amqp Port", default: "7672"),
+  username = Kino.Input.text("Username", default: "rabbitmq"),
+  password = Kino.Input.password("Password", default: "rabbitmq")
+]
+|> Enum.each(&Kino.render/1)
+
+Kino.nothing()
+```
+
+```elixir
+connection_opts = [
+  host: amqp_host = Kino.Input.read(amqp_host),
+  port: amqp_port = Kino.Input.read(amqp_port),
+  username: username = Kino.Input.read(username),
+  password: Kino.Input.read(password)
+]
+
+{:ok, connection} = AMQP.Connection.open(connection_opts)
+{:ok, channel} = AMQP.Channel.open(connection)
+
+"Connected to amqp://#{username}@#{amqp_host}:#{amqp_port}"
+```
+
+## Declare Queue and bindings
+
+```elixir
+queue_name = Kino.Input.text("Queue Name", default: "hello")
+```
+
+```elixir
+queue_name = Kino.Input.read(queue_name)
+
+AMQP.Queue.declare(channel, queue_name)
+```
+
+## Sending message to RabbitMQ
+
+```elixir
+message = "Hello World!"
+
+AMQP.Basic.publish(channel, "", queue_name, message)
+
+IO.puts(" [x] Sent '#{message}'")
+
+AMQP.Connection.close(connection)
+```
+
+## Receicing message from RabbitMQ
+
+```elixir
+defmodule Receive do
+  def wait_for_messages do
+    receive do
+      {:basic_deliver, payload, _meta} ->
+        IO.puts(" [x] Received #{payload}")
+        wait_for_messages()
+    end
+  end
+end
+```
+
+```elixir
+{:ok, connection} = AMQP.Connection.open(connection_opts)
+{:ok, channel} = AMQP.Channel.open(connection)
+
+"Connected to amqp://#{username}@#{amqp_host}:#{amqp_port}"
+```
+
+## Declare Queue
+
+```elixir
+AMQP.Queue.declare(channel, queue_name)
+```
+
+## Consuming messages
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+AMQP.Basic.consume(channel, queue_name, nil, no_ack: true)
+IO.puts(" [*] Waiting for messages.")
+
+Receive.wait_for_messages()
+```

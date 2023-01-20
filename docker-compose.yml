@@ -1,0 +1,21 @@
+version: "3.9"
+
+# docker stop $(docker ps -a -q)
+# docker rm $(docker ps -a -q)
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.11.6-management
+    container_name: rabbitmq_study
+    hostname: rabbitmq_study
+    environment:
+      - RABBITMQ_DEFAULT_USER=rabbitmq
+      - RABBITMQ_DEFAULT_PASS=rabbitmq
+    volumes:
+    - ./docker/dev/rabbitmq:/etc/rabbitmq
+    - ./docker/dev/rabbit_cookie:/var/lib/rabbitmq/.erlang.cookie
+    ports:
+      # AMQP protocol port
+      - 7672:5672
+      # HTTP management UI
+      - 25672:15672
